@@ -1948,6 +1948,7 @@ function initEventListeners() {
   });
 
   // Tab 导航
+  let lastTabPullTime = 0;
   document.querySelectorAll('.tab-bar-item').forEach(tab => {
     tab.addEventListener('click', (e) => {
       console.log('点击Tab:', tab.dataset.view);
@@ -1965,6 +1966,13 @@ function initEventListeners() {
         loadSyncSettingsForm();
       } else {
         switchView(viewId);
+      }
+
+      // 切换 Tab 时拉取最新数据，30 秒内不重复拉取
+      const now = Date.now();
+      if (isConfigured() && now - lastTabPullTime > 30000) {
+        lastTabPullTime = now;
+        pullFromGitHub().then(() => renderHome());
       }
     });
   });
