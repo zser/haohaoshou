@@ -226,7 +226,17 @@ async function pushToGitHub(shouldShowToast = false) {
   isSyncing = true;
   try {
     updateSyncStatus('syncing');
-    const sha = localStorage.getItem(LS_SHA) || undefined;
+    let sha = localStorage.getItem(LS_SHA) || undefined;
+
+    // 本地没有 SHA 时，先拉取远程获取最新 SHA，避免 422
+    if (!sha) {
+      const remote = await fetchFromGitHub();
+      if (remote) {
+        sha = remote.sha;
+        localStorage.setItem(LS_SHA, sha);
+      }
+    }
+
     const data = {
       items: getItems(),
       locations: getLocations(),
@@ -240,7 +250,8 @@ async function pushToGitHub(shouldShowToast = false) {
     updateLastSyncTime();
     if (shouldShowToast) showToast('推送成功');
   } catch (e) {
-    if (e.message && e.message.includes('SHA')) {
+    // 兼容大小写，捕获 SHA 冲突错误后重试
+    if (e.message && e.message.toLowerCase().includes('sha')) {
       try {
         const fresh = await fetchFromGitHub();
         if (fresh) {
