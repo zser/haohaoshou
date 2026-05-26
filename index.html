@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>好好收 - 家庭物品存放记录</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2563EB">
+  <link rel="apple-touch-icon" href="icon-192.png">
+</head>
+<body>
+  <div id="app">
+    <!-- 页面头部 -->
+    <header class="page-header">
+    </header>
+
+    <!-- 搜索区域 -->
+    <section class="search-section">
+      <div class="search-header">
+        <h1 class="app-title">好好收</h1>
+      </div>
+      <div class="search-box">
+        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" id="searchInput" placeholder="搜索物品、位置、标签...">
+      </div>
+    </section>
+
+    <!-- 主内容区 -->
+    <main class="content" id="mainContent">
+      <!-- 首页视图 -->
+      <section class="view-section active" id="homeView">
+        <!-- 统计卡片 -->
+        <div class="stats-grid">
+          <div class="stat-card" style="cursor: pointer;" onclick="showAllItemsList()">
+            <div class="stat-value" id="totalItems">0</div>
+            <div class="stat-label">总物品</div>
+          </div>
+          <div class="stat-card" id="lowStockAlert" style="cursor: pointer;">
+            <div class="stat-value" style="color: var(--color-warning);">0</div>
+            <div class="stat-label">需补货</div>
+          </div>
+        </div>
+
+        <!-- 按位置浏览 -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">按位置浏览</h3>
+            <button class="btn btn-outline" style="padding: 6px 12px; font-size: 13px;" id="manageLocationsBtn">管理</button>
+          </div>
+          <div class="location-list" id="locationList">
+            <div style="margin-bottom: 10px;">
+              <input type="text" class="form-input" style="font-size: 14px; padding: 10px 12px;" id="locationSearchInput" placeholder="搜索位置..." oninput="filterLocationList(this.value)">
+            </div>
+            <div id="locationListItems"></div>
+          </div>
+        </div>
+
+        <!-- 最近更新 -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">最近更新</h3>
+          </div>
+          <div id="recentList">
+            <div class="empty-state">
+              <div class="empty-icon">📦</div>
+              <div class="empty-text">暂无记录，点击右下角添加</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 底部操作栏 -->
+        <div style="height: 20px;"></div>
+      </section>
+
+      <!-- 所有物品列表视图 -->
+      <section class="view-section" id="allItemsView">
+        <!-- 顶部导航栏 - 固定在最顶层 -->
+        <div class="view-nav view-nav-topmost" id="allItemsViewNav">
+          <button class="nav-back" onclick="switchView('homeView')">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </button>
+          <span class="nav-title" id="allItemsTitle">所有物品</span>
+          <div class="nav-right"></div>
+        </div>
+        <!-- Tabs 标签栏 -->
+        <div class="view-tabs" id="viewTabs">
+          <button class="view-tab active" data-filter="all" onclick="filterItemsByTag(null, this)">全部</button>
+        </div>
+        <!-- 物品列表 -->
+        <div class="items-list" id="allItemsList"></div>
+      </section>
+
+      <!-- 搜索结果视图 -->
+      <section class="view-section" id="searchView">
+        <!-- 顶部导航栏 -->
+        <div class="view-nav view-nav-fixed">
+          <button class="nav-back" id="backFromSearch">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </button>
+          <span class="nav-title">搜索结果</span>
+          <button class="btn btn-text" id="clearSearchBtn" style="font-size: 14px; color: var(--brand-primary);">清除</button>
+        </div>
+        <div class="result-count" id="resultCount">找到 0 个结果</div>
+        <div class="search-results" id="searchResults"></div>
+      </section>
+
+      <!-- 标签筛选视图 -->
+      <section class="view-section" id="tagFilterView">
+        <!-- 顶部导航栏 -->
+        <div class="view-nav view-nav-fixed">
+          <button class="nav-back" id="backFromTagFilter">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </button>
+          <span class="nav-title" id="tagFilterTitle">标签筛选</span>
+          <div class="nav-right"></div>
+        </div>
+        <div class="filter-results" id="tagFilterResults"></div>
+      </section>
+
+      <!-- 位置筛选视图 -->
+      <section class="view-section" id="locationFilterView">
+        <!-- 顶部导航栏 -->
+        <div class="view-nav view-nav-fixed">
+          <button class="nav-back" id="backFromLocationFilter">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </button>
+          <span class="nav-title" id="locationFilterTitle">位置筛选</span>
+          <div class="nav-right"></div>
+        </div>
+        <div class="filter-search-wrap location-filter-search-wrap">
+          <div class="inline-search-box">
+            <svg class="inline-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="M21 21l-4.35-4.35"></path>
+            </svg>
+            <input type="text" id="locationFilterSearchInput" placeholder="搜索当前位置下的物品、标签、备注..." autocomplete="off">
+            <button type="button" class="inline-search-clear" id="clearLocationFilterSearch" style="display:none;">清除</button>
+          </div>
+        </div>
+        <div class="filter-tabs" id="locationTagTabs" style="display: none; margin-bottom: 12px;"></div>
+        <div class="filter-results" id="locationFilterResults"></div>
+      </section>
+
+      <!-- 添加/编辑物品视图 -->
+      <section class="view-section" id="itemFormView">
+        <!-- 顶部导航栏 -->
+        <div class="view-nav view-nav-fixed">
+          <button class="nav-back" id="backFromForm">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M6 18L18 6" stroke="currentColor" stroke-width="2"/></svg>
+          </button>
+          <span class="nav-title" id="formTitle">添加物品</span>
+          <button class="nav-save" id="saveItemBtn">保存</button>
+        </div>
+        <div class="card" style="margin: 16px;">
+          <form id="itemForm">
+            <input type="hidden" id="itemId">
+            <div class="form-group">
+              <label for="itemName">物品名称 *</label>
+              <input type="text" id="itemName" class="form-input" required placeholder="如：五号电池">
+            </div>
+            <div class="form-group">
+              <label>数量 *</label>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <button type="button" class="btn btn-outline" id="qtyMinus">-</button>
+                <input type="number" id="itemQuantity" class="form-input" style="width: 80px; text-align: center;" value="1" min="0" required>
+                <button type="button" class="btn btn-outline" id="qtyPlus">+</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>存放位置 *</label>
+              <!-- 已选位置标签 -->
+              <div id="selectedLocationTag" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
+                <span class="location-tag" id="currentLocationTag" style="display: none;">
+                  <span id="currentLocationName"></span>
+                  <button type="button" class="location-tag-delete" onclick="clearLocation()">×</button>
+                </span>
+                <span class="location-tag-add" onclick="showLocationPicker()">+ 添加</span>
+              </div>
+              <!-- 位置选择下拉 -->
+              <div id="locationPicker" style="display: none; border: 1px solid var(--color-border); border-radius: 8px; padding: 8px; max-height: 200px; overflow-y: auto;">
+                <div id="locationSelector"></div>
+                <div style="border-top: 1px solid var(--color-border); margin-top: 8px; padding-top: 8px;">
+                  <input type="text" id="newLocationInput" class="form-input" placeholder="输入新位置名称..." style="margin-bottom: 8px;">
+                  <button type="button" class="btn btn-primary btn-block" id="addNewLocationBtn">+ 创建并选择</button>
+                </div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>标签</label>
+              <div class="tag-selector" id="tagSelector"></div>
+              <input type="hidden" id="selectedTags">
+            </div>
+            <div class="form-group">
+              <label for="itemThreshold">最低库存提醒（选填）</label>
+              <input type="number" id="itemThreshold" class="form-input" placeholder="数量低于此值时提醒" min="0">
+            </div>
+            <div class="form-group">
+              <label for="itemRemark">备注</label>
+              <textarea id="itemRemark" class="form-input form-textarea" placeholder="补充说明..."></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="card" style="margin: 0 16px; display: none;" id="formActions">
+          <button class="btn btn-danger btn-block" id="deleteItemBtn">删除物品</button>
+        </div>
+      </section>
+
+      <!-- 物品详情视图 -->
+      <section class="view-section" id="itemDetailView">
+        <!-- 顶部导航栏 -->
+        <div class="view-nav">
+          <button class="nav-back" id="backFromDetail">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </button>
+          <span class="nav-title" id="detailNavTitle">物品详情</span>
+          <button class="nav-edit" id="editItemBtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+        </div>
+        <div class="card" style="margin: 0 16px 16px;">
+          <div style="text-align: center; margin-bottom: 12px;">
+            <div style="font-size: 36px; font-weight: 700; color: var(--color-text-primary);" id="detailItemName"></div>
+          </div>
+          <div id="itemDetail"></div>
+        </div>
+      </section>
+
+      <!-- 标签管理视图 -->
+      <section class="view-section" id="tagManageView">
+        <!-- 顶部导航栏 -->
+        <div class="view-nav view-nav-fixed">
+          <button class="nav-back" id="backFromTagManage">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </button>
+          <span class="nav-title">标签管理</span>
+          <button class="nav-add" id="addTagBtn">+ 新建</button>
+        </div>
+        <div class="content" id="tagManageList"></div>
+      </section>
+
+      <!-- 位置管理视图 -->
+      <section class="view-section" id="locationManageView">
+        <!-- 顶部导航栏 -->
+        <div class="view-nav view-nav-fixed">
+          <button class="nav-back" id="backFromLocationManage">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </button>
+          <span class="nav-title">位置管理</span>
+          <button class="nav-add" id="addLocationBtn">+ 新建</button>
+        </div>
+        <div class="content" id="locationManageList"></div>
+      </section>
+
+      <!-- 提醒列表视图 -->
+      <section class="view-section" id="alertListView">
+        <!-- 顶部导航栏 -->
+        <div class="view-nav view-nav-fixed">
+          <button class="nav-back" id="backFromAlertList">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </button>
+          <span class="nav-title">库存提醒</span>
+          <div class="nav-right"></div>
+        </div>
+        <div class="alert-search-panel">
+          <div class="alert-search-box">
+            <svg class="alert-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input type="text" id="alertSearchInput" placeholder="搜索需补货物品、位置、标签...">
+            <button class="alert-search-clear" id="clearAlertSearchBtn" type="button" style="display:none;">清除</button>
+          </div>
+        </div>
+        <div class="content" id="alertFullList"></div>
+      </section>
+
+      <!-- 设置视图 -->
+      <section class="view-section" id="settingsView">
+        <div class="view-nav view-nav-fixed">
+          <button class="nav-back" onclick="switchView('homeView')">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </button>
+          <span class="nav-title">设置</span>
+          <div class="nav-right"></div>
+        </div>
+        <div style="padding: 16px;">
+          <!-- GitHub 同步配置 -->
+          <div class="settings-card">
+            <h3 class="settings-card-title">GitHub 同步配置</h3>
+            <div class="settings-form-group">
+              <label class="settings-label">Personal Access Token</label>
+              <div style="position: relative;">
+                <input id="settings-token" type="password" class="form-input" placeholder="ghp_xxxxxxxxxxxx" style="padding-right: 36px;">
+                <button onclick="toggleTokenVisibility()" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--color-text-muted);">
+                  <svg id="token-eye-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="settings-form-group">
+              <label class="settings-label">仓库 Owner</label>
+              <input id="settings-owner" type="text" class="form-input" placeholder="GitHub 用户名">
+            </div>
+            <div class="settings-form-group">
+              <label class="settings-label">仓库名称</label>
+              <input id="settings-repo" type="text" class="form-input" placeholder="haohaoshou-data">
+            </div>
+            <div style="margin-top: 16px; display: flex; gap: 8px;">
+              <button class="btn btn-primary" style="flex:1;" onclick="saveSyncSettings()">保存配置</button>
+              <button class="btn btn-outline" style="flex:1;" onclick="testGitHubConnection()">测试连接</button>
+            </div>
+          </div>
+
+          <!-- 同步状态 -->
+          <div class="settings-card">
+            <h3 class="settings-card-title">同步状态</h3>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+              <span id="sync-status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #9ca3af;"></span>
+              <span id="sync-status-text" style="font-size: 14px; color: var(--color-text-secondary);">未配置</span>
+            </div>
+            <div id="sync-last-time" style="font-size: 12px; color: var(--color-text-muted);">-</div>
+            <div style="margin-top: 12px; display: flex; gap: 8px;">
+              <button class="btn btn-outline" style="flex:1;" onclick="pullFromGitHub(true)">拉取</button>
+              <button class="btn btn-outline" style="flex:1;" onclick="pushToGitHub(true)">推送</button>
+            </div>
+          </div>
+
+          <!-- 关于 -->
+          <div class="settings-card">
+            <h3 class="settings-card-title">关于</h3>
+            <p style="font-size: 12px; color: var(--color-text-muted); line-height: 1.6;">好好收 - 家庭物品存放记录<br>数据存储于 GitHub 私有仓库，支持多设备同步。</p>
+          </div>
+
+          <!-- 危险操作 -->
+          <div class="settings-card" style="border-color: #ef4444;">
+            <h3 class="settings-card-title" style="color: #ef4444;">危险操作</h3>
+            <button class="btn btn-danger" style="width: 100%;" onclick="clearAllAppData()">清空所有数据</button>
+          </div>
+        </div>
+      </section>
+
+      </main>
+
+    <!-- 浮动添加按钮 -->
+    <button class="fab" id="addItemBtn" style="position: fixed; right: 20px; bottom: 90px;">+</button>
+
+    <!-- 高亮设置弹出层 -->
+    <div class="modal-overlay" id="highlightModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 class="modal-title">搜索结果高亮设置</h3>
+          <button class="modal-close" id="closeHighlightModal">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="highlight-options">
+            <label class="radio-option">
+              <input type="radio" name="highlightMode" value="none">
+              <span>不高亮（默认关闭）</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="highlightMode" value="keyword">
+              <span>高亮关键词</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="highlightMode" value="quantity">
+              <span>高亮数量</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="highlightMode" value="both">
+              <span>关键词 + 数量全高亮</span>
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" style="flex:1;" id="closeHighlightModal">取消</button>
+          <button class="btn btn-primary" style="flex:1;" id="confirmHighlight">确认</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 新建位置弹出层 -->
+    <div class="modal-overlay" id="locationModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 class="modal-title" id="locationModalTitle">添加位置</h3>
+          <button class="modal-close" id="closeLocationModal">×</button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="editLocationId">
+          <div class="form-group">
+            <label for="locationName">位置名称</label>
+            <input type="text" id="locationName" class="form-input" placeholder="如：电视柜抽屉">
+          </div>
+          <div class="form-group">
+            <label for="locationParentSelect">父级位置（可选）</label>
+            <select id="locationParentSelect" class="form-input form-select">
+              <option value="">无（顶级位置）</option>
+            </select>
+            <small style="color: var(--color-text-muted); font-size: 12px; margin-top: 4px; display: block;">选择父级位置可创建层级结构</small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" style="flex:1;" id="closeLocationModal2">取消</button>
+          <button class="btn btn-primary" style="flex:1;" id="saveLocationBtn">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 新建标签弹出层 -->
+    <div class="modal-overlay" id="tagModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 class="modal-title" id="tagModalTitle">添加标签</h3>
+          <button class="modal-close" id="closeTagModal">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="tagName">标签名称</label>
+            <input type="text" id="tagName" class="form-input" placeholder="如：清洁用品">
+          </div>
+          <div class="form-group">
+            <label>标签颜色</label>
+            <div class="color-picker" id="colorPicker">
+              <span class="color-option selected" data-color="#2563EB" data-class="blue" style="background:#2563EB"></span>
+              <span class="color-option" data-color="#3B82F6" data-class="blue-light" style="background:#3B82F6"></span>
+              <span class="color-option" data-color="#10B981" data-class="green" style="background:#10B981"></span>
+              <span class="color-option" data-color="#F59E0B" data-class="orange" style="background:#F59E0B"></span>
+              <span class="color-option" data-color="#EF4444" data-class="red" style="background:#EF4444"></span>
+              <span class="color-option" data-color="#8B5CF6" data-class="purple" style="background:#8B5CF6"></span>
+              <span class="color-option" data-color="#EC4899" data-class="pink" style="background:#EC4899"></span>
+              <span class="color-option" data-color="#EAB308" data-class="yellow" style="background:#EAB308"></span>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" style="flex:1;" id="closeTagModal2">取消</button>
+          <button class="btn btn-primary" style="flex:1;" id="saveTagBtn">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 确认删除弹出层 -->
+    <div class="modal-overlay" id="confirmModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 class="modal-title">确认删除</h3>
+          <button class="modal-close" id="closeConfirmModal">×</button>
+        </div>
+        <div class="modal-body">
+          <p id="confirmMessage" style="text-align: center; color: var(--color-text-secondary);">确定要删除吗？此操作不可撤销。</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" style="flex:1;" id="closeConfirmModal2">取消</button>
+          <button class="btn btn-danger" style="flex:1;" id="confirmDeleteBtn">删除</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast 提示 -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Tab 导航 -->
+    <nav class="tab-bar" id="tabNav">
+      <button class="tab-bar-item active" data-view="homeView">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span>首页</span>
+      </button>
+      <button class="tab-bar-item" data-view="tagManageView">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        <span>标签</span>
+      </button>
+      <button class="tab-bar-item" data-view="locationManageView">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <span>位置</span>
+      </button>
+      <button class="tab-bar-item" data-view="settingsView">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>设置</span>
+      </button>
+    </nav>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
