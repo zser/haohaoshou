@@ -2935,3 +2935,30 @@ body[data-view="itemDetailView"] .tab-bar {
   background: #fef2f2;
 }
 
+.color-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.color-option {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 3px solid transparent;
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+.color-option:hover {
+  transform: scale(1.15);
+}
+
+.color-option.selected {
+  border-color: #1e3a5f;
+  transform: scale(1.15);
+  box-shadow: 0 0 0 2px #fff inset;
+}
+
