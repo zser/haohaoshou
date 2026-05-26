@@ -201,10 +201,10 @@ async function pullFromGitHub(shouldShowToast = false) {
     const result = await fetchFromGitHub();
     if (result) {
       const data = result.content;
-      if (data.items) saveItems(data.items);
-      if (data.locations) saveLocations(data.locations);
-      if (data.tags) saveTags(data.tags);
-      if (data.settings) saveSettings(data.settings);
+      if (data.items) saveData(STORAGE_KEYS.ITEMS, data.items);
+      if (data.locations) saveData(STORAGE_KEYS.LOCATIONS, data.locations);
+      if (data.tags) saveData(STORAGE_KEYS.TAGS, data.tags);
+      if (data.settings) saveData(STORAGE_KEYS.SETTINGS, data.settings);
       localStorage.setItem(LS_SHA, result.sha);
       updateSyncStatus('synced');
       updateLastSyncTime();
