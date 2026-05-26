@@ -3222,6 +3222,9 @@ console.log('脚本加载完成');
       e.preventDefault();
       e.stopImmediatePropagation();
       if (typeof deleteCallback === 'function') deleteCallback();
+      deleteCallback = null;
+      const confirmModal = $('confirmModal');
+      if (confirmModal) confirmModal.classList.remove('active');
       return;
     }
   }, true);
