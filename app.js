@@ -97,6 +97,7 @@ function getItems() {
 
 function saveItems(items) {
   saveData(STORAGE_KEYS.ITEMS, items);
+  pushToGitHub();
 }
 
 function getLocations() {
@@ -105,6 +106,7 @@ function getLocations() {
 
 function saveLocations(locations) {
   saveData(STORAGE_KEYS.LOCATIONS, locations);
+  pushToGitHub();
 }
 
 function getTags() {
@@ -113,6 +115,7 @@ function getTags() {
 
 function saveTags(tags) {
   saveData(STORAGE_KEYS.TAGS, tags);
+  pushToGitHub();
 }
 
 function getSettings() {
@@ -121,6 +124,7 @@ function getSettings() {
 
 function saveSettings(settings) {
   saveData(STORAGE_KEYS.SETTINGS, settings);
+  pushToGitHub();
 }
 
 // ============================================
