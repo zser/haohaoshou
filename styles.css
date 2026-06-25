@@ -623,6 +623,20 @@ body {
   color: var(--color-text-placeholder);
 }
 
+/* 未填必填项高亮 */
+.form-input.input-error,
+.form-group.has-error .location-tag-add {
+  border-color: var(--color-danger) !important;
+  background: #fff1f2;
+  animation: shake 0.4s;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
 .form-textarea {
   min-height: 100px;
   resize: vertical;

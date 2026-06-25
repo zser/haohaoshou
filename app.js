@@ -1119,13 +1119,22 @@ function saveItem() {
   const selectedLocation = document.querySelector('.location-option.selected');
   const locationId = selectedLocation ? selectedLocation.dataset.id : null;
 
-  if (!name) {
-    showToast('请输入物品名称');
-    return;
-  }
+  // 清理上一次的高亮
+  const nameInput = document.getElementById('itemName');
+  const locationGroup = document.getElementById('selectedLocationTag').closest('.form-group');
+  nameInput.classList.remove('input-error');
+  if (locationGroup) locationGroup.classList.remove('has-error');
 
-  if (!locationId) {
-    showToast('请选择存放位置');
+  // 收集未填的必填项，统一高亮 + 聚焦第一个
+  const missing = [];
+  if (!name) missing.push(nameInput);
+  if (!locationId && locationGroup) missing.push(locationGroup);
+
+  if (missing.length) {
+    missing.forEach(el => el.classList.add(nameInput === el ? 'input-error' : 'has-error'));
+    missing[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (missing[0] === nameInput) nameInput.focus();
+    showToast(missing.length > 1 ? '请填写物品名称和存放位置' : (!name ? '请输入物品名称' : '请选择存放位置'));
     return;
   }
 
@@ -2021,6 +2030,15 @@ function initEventListeners() {
     console.log('删除物品:', currentItemId);
     showDeleteConfirm(currentItemId);
   });
+
+  // 详情页底部删除物品
+  const detailDeleteBtn = document.getElementById('detailDeleteBtn');
+  if (detailDeleteBtn) {
+    detailDeleteBtn.addEventListener('click', () => {
+      console.log('详情页删除物品:', currentItemId);
+      showDeleteConfirm(currentItemId);
+    });
+  }
 
   // 数量加减
   document.getElementById('qtyMinus').addEventListener('click', () => {

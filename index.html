@@ -150,7 +150,7 @@
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M6 18L18 6" stroke="currentColor" stroke-width="2"/></svg>
           </button>
           <span class="nav-title" id="formTitle">添加物品</span>
-          <button class="nav-save" id="saveItemBtn">保存</button>
+          <div class="nav-right"></div>
         </div>
         <div class="card" style="margin: 16px;">
           <form id="itemForm">
@@ -201,7 +201,10 @@
             </div>
           </form>
         </div>
-        <div class="card" style="margin: 0 16px; display: none;" id="formActions">
+        <div style="margin: 0 16px 16px;">
+          <button type="button" class="btn btn-primary btn-block" id="saveItemBtn">保存</button>
+        </div>
+        <div class="card" style="margin: 0 16px 16px; display: none;" id="formActions">
           <button class="btn btn-danger btn-block" id="deleteItemBtn">删除物品</button>
         </div>
       </section>
@@ -223,6 +226,9 @@
             <div style="font-size: 36px; font-weight: 700; color: var(--color-text-primary);" id="detailItemName"></div>
           </div>
           <div id="itemDetail"></div>
+        </div>
+        <div style="margin: 0 16px 16px;">
+          <button class="btn btn-danger btn-block" id="detailDeleteBtn">删除物品</button>
         </div>
       </section>
 
