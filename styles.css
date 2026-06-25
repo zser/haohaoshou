@@ -637,6 +637,36 @@ body {
   75% { transform: translateX(4px); }
 }
 
+/* 批量添加行布局 */
+.batch-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.batch-row .batch-row-name {
+  flex: 1;
+}
+.batch-row .batch-row-qty {
+  width: 64px;
+  text-align: center;
+}
+.batch-row .batch-row-del {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 40px;
+  padding: 0;
+  font-size: 18px;
+  color: var(--color-danger);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.batch-row .batch-row-del:active {
+  background: #fff1f2;
+}
+
 .form-textarea {
   min-height: 100px;
   resize: vertical;
@@ -1120,7 +1150,8 @@ body {
 #tagManageView,
 #locationManageView,
 #alertListView,
-#itemFormView {
+#itemFormView,
+#batchAddView {
   padding-top: 57px;
 }
 
@@ -1749,6 +1780,7 @@ body[data-view="searchView"] .search-icon {
 /* 表单、详情、管理等页面不展示全局搜索，避免层级混乱 */
 body[data-view="itemFormView"] .search-section,
 body[data-view="itemDetailView"] .search-section,
+body[data-view="batchAddView"] .search-section,
 body[data-view="tagManageView"] .search-section,
 body[data-view="locationManageView"] .search-section,
 body[data-view="alertListView"] .search-section,

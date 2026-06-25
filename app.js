@@ -390,6 +390,7 @@ let currentItemId = null;
 let currentHighlightMode = 'keyword';
 let currentSearchQuery = '';
 let deleteCallback = null;
+let currentBatchLocationId = null;
 
 // ============================================
 // 工具函数
@@ -978,6 +979,111 @@ function showAddItemForm() {
   renderTagSelector([]);
 
   switchView('itemFormView');
+}
+
+// ===== 批量添加物品 =====
+function buildBatchRowHtml() {
+  return `
+    <div class="batch-row">
+      <input type="text" class="form-input batch-row-name" placeholder="物品名称">
+      <input type="number" class="form-input batch-row-qty" value="1" min="0">
+      <button type="button" class="batch-row-del" onclick="removeBatchRow(this)" title="删除该行">×</button>
+    </div>
+  `;
+}
+
+function showBatchAddForm(locationId) {
+  const locations = getLocations();
+  const loc = locations.find(l => l.id === locationId);
+  if (!loc) {
+    showToast('位置不存在');
+    return;
+  }
+  currentBatchLocationId = locationId;
+  document.getElementById('batchLocationName').textContent = getLocationPath(locationId);
+  renderBatchRows(3);
+  switchView('batchAddView');
+}
+
+function renderBatchRows(count) {
+  const container = document.getElementById('batchItemList');
+  container.innerHTML = Array.from({ length: count }, () => buildBatchRowHtml()).join('');
+}
+
+function addBatchRow() {
+  const container = document.getElementById('batchItemList');
+  container.insertAdjacentHTML('beforeend', buildBatchRowHtml());
+  // 聚焦新行名称框
+  const rows = container.querySelectorAll('.batch-row-name');
+  if (rows.length) rows[rows.length - 1].focus();
+}
+
+function removeBatchRow(btn) {
+  const container = document.getElementById('batchItemList');
+  const rows = container.querySelectorAll('.batch-row');
+  if (rows.length <= 1) {
+    showToast('至少保留一行');
+    return;
+  }
+  btn.closest('.batch-row').remove();
+}
+
+function saveBatchItems() {
+  if (!currentBatchLocationId) {
+    showToast('位置信息丢失，请重新进入');
+    return;
+  }
+
+  const rows = document.querySelectorAll('#batchItemList .batch-row');
+  const parsed = [];
+  const emptyNameInputs = [];
+
+  rows.forEach(row => {
+    const nameInput = row.querySelector('.batch-row-name');
+    const qtyInput = row.querySelector('.batch-row-qty');
+    const name = nameInput.value.trim();
+    const quantity = Math.max(0, parseInt(qtyInput.value) || 1);
+    nameInput.classList.remove('input-error');
+    if (!name) {
+      emptyNameInputs.push(nameInput);
+      nameInput.classList.add('input-error');
+    } else {
+      parsed.push({ name, quantity });
+    }
+  });
+
+  if (emptyNameInputs.length) {
+    emptyNameInputs[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    emptyNameInputs[0].focus();
+    showToast(emptyNameInputs.length > 1 ? `还有 ${emptyNameInputs.length} 行未填名称` : '请填写物品名称');
+    return;
+  }
+
+  if (!parsed.length) {
+    showToast('请至少添加一件物品');
+    return;
+  }
+
+  const items = getItems();
+  const now = Date.now();
+  parsed.forEach((p, i) => {
+    items.push({
+      id: generateId('item'),
+      name: p.name,
+      quantity: p.quantity,
+      locationId: currentBatchLocationId,
+      tags: [],
+      threshold: null,
+      remark: '',
+      updatedAt: now + i
+    });
+  });
+  saveItems(items);
+
+  const locationName = getLocationPath(currentBatchLocationId);
+  showToast(`已添加 ${parsed.length} 件物品到「${locationName}」`);
+  switchView('locationManageView');
+  renderLocationManageList();
 }
 
 function showEditItemForm(itemId) {
@@ -1994,6 +2100,7 @@ function initEventListeners() {
     { id: 'backFromLocationFilter', view: 'homeView' },
     { id: 'backFromTagManage', view: 'homeView' },
     { id: 'backFromLocationManage', view: 'homeView' },
+    { id: 'backFromBatchAdd', view: 'locationManageView' },
     { id: 'backFromAlertList', view: 'homeView' },
     { id: 'backFromSearch', view: 'homeView' }
   ];
@@ -2023,6 +2130,15 @@ function initEventListeners() {
   document.getElementById('saveItemBtn').addEventListener('click', () => {
     console.log('保存物品');
     saveItem();
+  });
+
+  // 批量添加：添加一行 / 保存全部
+  document.getElementById('batchAddRowBtn').addEventListener('click', () => {
+    addBatchRow();
+  });
+  document.getElementById('batchSaveBtn').addEventListener('click', () => {
+    console.log('批量保存物品');
+    saveBatchItems();
   });
 
   // 删除物品
@@ -2904,6 +3020,9 @@ console.log('脚本加载完成');
   function iconDelete() {
     return '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>';
   }
+  function iconBatch() {
+    return '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>';
+  }
 
   function childrenOf(parentId) {
     const parent = normParent(parentId);
@@ -2987,6 +3106,7 @@ console.log('脚本加载完成');
           </button>
           <div class="manage-item-actions">
             <button type="button" class="icon-btn add" data-loc-action="add-child" data-id="${safeEscape(loc.id)}" title="添加子位置">${iconPlus()}</button>
+            <button type="button" class="icon-btn" data-loc-action="batch-add" data-id="${safeEscape(loc.id)}" title="批量添加物品">${iconBatch()}</button>
             <button type="button" class="icon-btn" data-loc-action="edit" data-id="${safeEscape(loc.id)}" title="编辑位置">${iconEdit()}</button>
             <button type="button" class="icon-btn delete" data-loc-action="delete" data-id="${safeEscape(loc.id)}" title="删除位置">${iconDelete()}</button>
           </div>
@@ -3211,6 +3331,9 @@ console.log('脚本加载完成');
         else if (typeof filterByLocation === 'function') filterByLocation(id);
       } else if (action === 'add-child') {
         window.showAddLocationModal(id);
+      } else if (action === 'batch-add') {
+        if (typeof showBatchAddForm === 'function') showBatchAddForm(id);
+        else if (typeof window.showBatchAddForm === 'function') window.showBatchAddForm(id);
       } else if (action === 'edit') {
         window.editLocation(id);
       } else if (action === 'delete') {

@@ -209,6 +209,29 @@
         </div>
       </section>
 
+      <!-- 批量添加物品视图 -->
+      <section class="view-section" id="batchAddView">
+        <!-- 顶部导航栏 -->
+        <div class="view-nav view-nav-fixed">
+          <button class="nav-back" id="backFromBatchAdd">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </button>
+          <span class="nav-title">批量添加</span>
+          <div class="nav-right"></div>
+        </div>
+        <div class="card" style="margin: 16px 16px 12px;">
+          <div style="font-size: 13px; color: var(--color-text-muted); margin-bottom: 4px;">存放位置</div>
+          <div style="font-size: 16px; font-weight: 600; color: var(--color-text-primary);" id="batchLocationName">-</div>
+        </div>
+        <div style="margin: 0 16px 8px;" id="batchItemList"></div>
+        <div style="margin: 0 16px 16px;">
+          <button type="button" class="btn btn-outline btn-block" id="batchAddRowBtn">+ 添加一行</button>
+        </div>
+        <div style="margin: 0 16px 16px;">
+          <button type="button" class="btn btn-primary btn-block" id="batchSaveBtn">保存全部</button>
+        </div>
+      </section>
+
       <!-- 物品详情视图 -->
       <section class="view-section" id="itemDetailView">
         <!-- 顶部导航栏 -->
