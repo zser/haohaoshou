@@ -1126,27 +1126,27 @@ function renderLocationSelector(selectedId) {
     tagEl.style.display = 'none';
   }
 
-  const rootLocations = locations.filter(l => !l.parentId);
+  // 递归渲染所有层级的位置
+  function renderLevel(parentId, depth) {
+    return locations.filter(l => l.parentId === parentId).map(loc => {
+      const isSelected = loc.id === selectedId;
+      const indent = depth > 0 ? ` style="margin-left: ${depth * 24}px;"` : '';
+      const icon = depth === 0
+        ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> '
+        : '↳ ';
+      const parentPath = depth > 0 ? `<div class="location-path">${escapeHtml(getLocationPath(loc.parentId))}</div>` : '';
 
-  container.innerHTML = rootLocations.map(loc => {
-    const children = locations.filter(l => l.parentId === loc.id);
-    const isSelected = loc.id === selectedId;
+      return `
+        <div class="location-option ${depth > 0 ? 'location-option-child' : ''} ${isSelected ? 'selected' : ''}" data-id="${loc.id}"${indent} onclick="selectLocation('${loc.id}')">
+          <div class="location-option-name">${icon} ${escapeHtml(loc.name)}</div>
+          ${parentPath}
+        </div>
+        ${renderLevel(loc.id, depth + 1)}
+      `;
+    }).join('');
+  }
 
-    return `
-      <div class="location-option ${isSelected ? 'selected' : ''}" data-id="${loc.id}" onclick="selectLocation('${loc.id}')">
-        <div class="location-option-name"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> ${escapeHtml(loc.name)}</div>
-      </div>
-      ${children.map(child => {
-        const childSelected = child.id === selectedId;
-        return `
-          <div class="location-option location-option-child ${childSelected ? 'selected' : ''}" data-id="${child.id}" onclick="selectLocation('${child.id}')">
-            <div class="location-option-name">  ↳ ${escapeHtml(child.name)}</div>
-            <div class="location-path">${escapeHtml(loc.name)}</div>
-          </div>
-        `;
-      }).join('')}
-    `;
-  }).join('');
+  container.innerHTML = renderLevel(null, 0);
 }
 
 function showLocationPicker() {
