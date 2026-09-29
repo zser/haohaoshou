@@ -2480,6 +2480,10 @@ body[data-view="itemDetailView"] .tab-bar {
     height: 30px;
     border-radius: 10px;
   }
+
+  .location-manage-card .location-toggle {
+    padding: 5px 6px;
+  }
 }
 
 /* ============================================

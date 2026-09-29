@@ -3126,13 +3126,19 @@ console.log('脚本加载完成');
     return all.filter(l => !l.parentId || !ids.has(l.parentId));
   }
 
+  // 位置管理列表已展开的节点（默认全部收起，只展示一级）
+  const locationManageExpanded = new Set();
+
   function buildNode(loc, level, visited) {
     if (!loc || visited.has(loc.id)) return '';
     visited.add(loc.id);
     const childList = childrenOf(loc.id).filter(c => !visited.has(c.id));
     const count = items().filter(it => relatedIds(loc.id).has(it.locationId)).length;
     const levelText = level === 0 ? '一级位置' : `${level + 1}级位置`;
-    const childrenHtml = childList.map(child => buildNode(child, level + 1, new Set(visited))).join('');
+    const isExpanded = locationManageExpanded.has(loc.id);
+    const childrenHtml = childList.length && isExpanded
+      ? childList.map(child => buildNode(child, level + 1, new Set(visited))).join('')
+      : '';
     return `
       <div class="location-manage-node" style="--level:${level}">
         <div class="manage-item location-manage-card" data-location-id="${safeEscape(loc.id)}">
@@ -3144,6 +3150,7 @@ console.log('脚本加载完成');
             </span>
           </button>
           <div class="manage-item-actions">
+            ${childList.length ? `<button type="button" class="location-toggle" data-loc-action="toggle" data-id="${safeEscape(loc.id)}">${isExpanded ? '收起 ▾' : '展开 ▸'}</button>` : ''}
             <button type="button" class="icon-btn add" data-loc-action="add-child" data-id="${safeEscape(loc.id)}" title="添加子位置">${iconPlus()}</button>
             <button type="button" class="icon-btn" data-loc-action="batch-add" data-id="${safeEscape(loc.id)}" title="批量添加物品">${iconBatch()}</button>
             <button type="button" class="icon-btn" data-loc-action="edit" data-id="${safeEscape(loc.id)}" title="编辑位置">${iconEdit()}</button>
@@ -3368,6 +3375,13 @@ console.log('脚本加载完成');
         if (typeof window.showLocationItems === 'function') window.showLocationItems(id);
         else if (typeof showLocationItems === 'function') showLocationItems(id);
         else if (typeof filterByLocation === 'function') filterByLocation(id);
+      } else if (action === 'toggle') {
+        if (locationManageExpanded.has(id)) {
+          locationManageExpanded.delete(id);
+        } else {
+          locationManageExpanded.add(id);
+        }
+        window.renderLocationManageList();
       } else if (action === 'add-child') {
         window.showAddLocationModal(id);
       } else if (action === 'batch-add') {
