@@ -975,6 +975,8 @@ function showAddItemForm() {
   document.getElementById('selectedTags').value = '';
   document.getElementById('formActions').style.display = 'none';
 
+  // 恢复默认状态：只展示一级位置，其余收起
+  locationPickerExpanded.clear();
   renderLocationSelector(null);
   renderTagSelector([]);
 
@@ -1111,6 +1113,9 @@ function showEditItemForm(itemId) {
   switchView('itemFormView');
 }
 
+// 位置选择器中已展开的节点（默认全部收起，只展示一级）
+let locationPickerExpanded = new Set();
+
 function renderLocationSelector(selectedId) {
   const locations = getLocations();
   const container = document.getElementById('locationSelector');
@@ -1122,31 +1127,65 @@ function renderLocationSelector(selectedId) {
     const path = getLocationPath(selectedId);
     nameEl.textContent = path;
     tagEl.style.display = 'inline-flex';
+
+    // 自动展开选中项的祖先链，保证编辑时能看到已选位置
+    const byId = new Map(locations.map(l => [l.id, l]));
+    let cur = byId.get(selectedId);
+    while (cur && cur.parentId) {
+      locationPickerExpanded.add(cur.parentId);
+      cur = byId.get(cur.parentId);
+    }
   } else {
     tagEl.style.display = 'none';
   }
 
-  // 递归渲染所有层级的位置
+  // 子位置按名称排序（中文按拼音序）
+  function sortedChildren(parentId) {
+    return locations.filter(l => l.parentId === parentId)
+      .sort((a, b) => a.name.localeCompare(b.name, 'zh-Hans-CN'));
+  }
+
+  // 递归渲染位置树，收起的节点不渲染子级
   function renderLevel(parentId, depth) {
-    return locations.filter(l => l.parentId === parentId).map(loc => {
+    return sortedChildren(parentId).map(loc => {
       const isSelected = loc.id === selectedId;
+      const hasChildren = locations.some(l => l.parentId === loc.id);
+      const isExpanded = locationPickerExpanded.has(loc.id);
       const indent = depth > 0 ? ` style="margin-left: ${depth * 24}px;"` : '';
       const icon = depth === 0
         ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> '
         : '↳ ';
+      const toggle = hasChildren
+        ? `<button type="button" class="location-toggle" onclick="event.stopPropagation(); toggleLocationNode('${loc.id}')" aria-label="${isExpanded ? `收起 ${escapeHtml(loc.name)}` : `展开 ${escapeHtml(loc.name)}`}">${isExpanded ? '收起 ▾' : '展开 ▸'}</button>`
+        : '';
       const parentPath = depth > 0 ? `<div class="location-path">${escapeHtml(getLocationPath(loc.parentId))}</div>` : '';
+      const childrenHtml = hasChildren && isExpanded ? renderLevel(loc.id, depth + 1) : '';
 
       return `
         <div class="location-option ${depth > 0 ? 'location-option-child' : ''} ${isSelected ? 'selected' : ''}" data-id="${loc.id}"${indent} onclick="selectLocation('${loc.id}')">
-          <div class="location-option-name">${icon} ${escapeHtml(loc.name)}</div>
-          ${parentPath}
+          <div class="location-option-main">
+            <div class="location-option-name">${icon} ${escapeHtml(loc.name)}</div>
+            ${parentPath}
+          </div>
+          ${toggle}
         </div>
-        ${renderLevel(loc.id, depth + 1)}
+        ${childrenHtml}
       `;
     }).join('');
   }
 
   container.innerHTML = renderLevel(null, 0);
+}
+
+function toggleLocationNode(locId) {
+  if (locationPickerExpanded.has(locId)) {
+    locationPickerExpanded.delete(locId);
+  } else {
+    locationPickerExpanded.add(locId);
+  }
+  // 重新渲染，保留当前选中状态
+  const selected = document.querySelector('.location-option.selected');
+  renderLocationSelector(selected ? selected.dataset.id : null);
 }
 
 function showLocationPicker() {

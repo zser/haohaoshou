@@ -902,11 +902,19 @@ body {
 }
 
 .location-option {
-  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 8px 16px;
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: background 0.2s;
   border: 1px solid transparent;
+}
+
+.location-option-main {
+  flex: 1;
+  min-width: 0;
 }
 
 .location-option:hover {
@@ -927,6 +935,29 @@ body {
 
 .location-option-name {
   font-size: 14px;
+}
+
+/* 位置树行右侧的展开/收起文字按钮 */
+.location-toggle {
+  padding: 8px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-size: 12px;
+  color: var(--brand-primary);
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.location-toggle:hover {
+  background: var(--brand-primary-bg);
+}
+
+.location-option.selected .location-toggle {
+  color: var(--brand-primary);
 }
 
 .location-selected-tip {
