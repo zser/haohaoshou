@@ -109,6 +109,14 @@ function saveLocations(locations) {
   pushToGitHub();
 }
 
+// 同级位置排序：手动排序值 order 优先，没有 order 的按名称（拼音）排在后面
+function compareLocationOrder(a, b) {
+  const ao = typeof a.order === 'number' ? a.order : Infinity;
+  const bo = typeof b.order === 'number' ? b.order : Infinity;
+  if (ao !== bo) return ao - bo;
+  return String(a.name || '').localeCompare(String(b.name || ''), 'zh-Hans-CN');
+}
+
 function getTags() {
   return loadData(STORAGE_KEYS.TAGS, DEFAULT_TAGS);
 }
@@ -598,7 +606,7 @@ function renderHome() {
 
   // 渲染位置列表 - 增加搜索功能
   const locationListItems = document.getElementById('locationListItems');
-  const rootLocations = locations.filter(l => !l.parentId);
+  const rootLocations = locations.filter(l => !l.parentId).sort(compareLocationOrder);
 
   const locationCounts = {};
   items.forEach(item => {
@@ -1139,10 +1147,10 @@ function renderLocationSelector(selectedId) {
     tagEl.style.display = 'none';
   }
 
-  // 子位置按名称排序（中文按拼音序）
+  // 子位置按手动排序值排，未排序的按名称（拼音）
   function sortedChildren(parentId) {
     return locations.filter(l => l.parentId === parentId)
-      .sort((a, b) => a.name.localeCompare(b.name, 'zh-Hans-CN'));
+      .sort(compareLocationOrder);
   }
 
   // 递归渲染位置树，收起的节点不渲染子级
@@ -3065,7 +3073,7 @@ console.log('脚本加载完成');
 
   function childrenOf(parentId) {
     const parent = normParent(parentId);
-    return locs().filter(l => normParent(l.parentId) === parent);
+    return locs().filter(l => normParent(l.parentId) === parent).sort(compareLocationOrder);
   }
 
   function descendantsOf(id) {
@@ -3123,7 +3131,7 @@ console.log('脚本加载完成');
     const all = locs();
     const ids = new Set(all.map(l => l.id));
     // 父级为空，或者父级不存在的异常数据，统一作为根节点展示，避免卡死/丢失。
-    return all.filter(l => !l.parentId || !ids.has(l.parentId));
+    return all.filter(l => !l.parentId || !ids.has(l.parentId)).sort(compareLocationOrder);
   }
 
   // 位置管理列表已展开的节点（默认全部收起，只展示一级）
@@ -3140,7 +3148,7 @@ console.log('脚本加载完成');
       ? childList.map(child => buildNode(child, level + 1, new Set(visited))).join('')
       : '';
     return `
-      <div class="location-manage-node" style="--level:${level}">
+      <div class="location-manage-node" style="--level:${level}" data-location-id="${safeEscape(loc.id)}" data-location-parent="${safeEscape(loc.parentId || '')}">
         <div class="manage-item location-manage-card" data-location-id="${safeEscape(loc.id)}">
           <button type="button" class="manage-item-left location-open-btn" data-loc-action="open" data-id="${safeEscape(loc.id)}" title="查看该位置物品">
             <span class="manage-location-icon">${iconLocation()}</span>
@@ -3150,12 +3158,12 @@ console.log('脚本加载完成');
             </span>
           </button>
           <div class="manage-item-actions">
-            ${childList.length ? `<button type="button" class="location-toggle" data-loc-action="toggle" data-id="${safeEscape(loc.id)}">${isExpanded ? '收起 ▾' : '展开 ▸'}</button>` : ''}
             <button type="button" class="icon-btn add" data-loc-action="add-child" data-id="${safeEscape(loc.id)}" title="添加子位置">${iconPlus()}</button>
             <button type="button" class="icon-btn" data-loc-action="batch-add" data-id="${safeEscape(loc.id)}" title="批量添加物品">${iconBatch()}</button>
             <button type="button" class="icon-btn" data-loc-action="edit" data-id="${safeEscape(loc.id)}" title="编辑位置">${iconEdit()}</button>
             <button type="button" class="icon-btn delete" data-loc-action="delete" data-id="${safeEscape(loc.id)}" title="删除位置">${iconDelete()}</button>
           </div>
+          ${childList.length ? `<button type="button" class="location-toggle location-manage-toggle" data-loc-action="toggle" data-id="${safeEscape(loc.id)}">${isExpanded ? '收起 ▾' : '展开 ▸'}</button>` : ''}
         </div>
         ${childrenHtml ? `<div class="location-manage-children">${childrenHtml}</div>` : ''}
       </div>`;
@@ -3176,6 +3184,120 @@ console.log('脚本加载完成');
         </div>`}
     `;
   };
+
+  // ===== 长按拖动排序（仅同层级之间） =====
+  let suppressClickAfterDrag = false;
+  let dragPressTimer = null;
+  let dragState = null; // { id, parentId, card: 拖动中的节点, moved }
+  let dragStartX = 0;
+  let dragStartY = 0;
+  const DRAG_PRESS_DELAY = 350;
+  const DRAG_MOVE_THRESHOLD = 10;
+
+  function onDragPointerDown(e) {
+    if (e.button !== undefined && e.button !== 0) return;
+    // 操作按钮上长按不触发拖动
+    if (e.target.closest('.icon-btn, .location-toggle, .location-manage-hint')) return;
+    const card = e.target.closest('.location-manage-card');
+    const node = card && card.closest('.location-manage-node');
+    if (!node || !node.closest('#locationManageList')) return;
+    const loc = locs().find(l => l.id === node.dataset.locationId);
+    if (!loc) return;
+
+    suppressClickAfterDrag = false;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    dragState = { id: loc.id, parentId: normParent(loc.parentId), card: null, moved: false };
+    clearTimeout(dragPressTimer);
+
+    if (e.pointerType === 'mouse') {
+      // 鼠标按下即可直接拖动，无需长按
+      dragState.card = node;
+      node.classList.add('dragging');
+    } else {
+      // 触屏长按进入拖动
+      dragPressTimer = setTimeout(() => {
+        if (!dragState) return;
+        dragState.card = node;
+        node.classList.add('dragging');
+        if (navigator.vibrate) { try { navigator.vibrate(30); } catch (_) { /* 不支持则忽略 */ } }
+      }, DRAG_PRESS_DELAY);
+    }
+  }
+
+  function onDragPointerMove(e) {
+    if (!dragState) return;
+    // 未进入拖动态时移动超过阈值，视为滚动手势，取消长按
+    if (!dragState.card) {
+      if (Math.abs(e.clientX - dragStartX) > DRAG_MOVE_THRESHOLD || Math.abs(e.clientY - dragStartY) > DRAG_MOVE_THRESHOLD) {
+        clearTimeout(dragPressTimer);
+        dragState = null;
+      }
+      return;
+    }
+    e.preventDefault();
+    const draggedNode = dragState.card;
+    const over = document.elementFromPoint(e.clientX, e.clientY);
+    const targetNode = over && over.closest ? over.closest('.location-manage-node') : null;
+    if (!targetNode || targetNode === draggedNode) return;
+    // 仅允许同层级位置之间交换顺序
+    if (targetNode.dataset.locationParent !== draggedNode.dataset.locationParent) return;
+    if (targetNode.parentNode !== draggedNode.parentNode) return;
+    const targetRect = targetNode.getBoundingClientRect();
+    const before = e.clientY < targetRect.top + targetRect.height / 2;
+    targetNode.parentNode.insertBefore(draggedNode, before ? targetNode : targetNode.nextSibling);
+    dragState.moved = true;
+  }
+
+  function saveDragOrder() {
+    const parent = dragState.card.parentNode;
+    if (!parent) return;
+    const ids = Array.from(parent.querySelectorAll(':scope > .location-manage-node'))
+      .map(n => n.dataset.locationId);
+    const all = locs();
+    let changed = false;
+    ids.forEach((id, i) => {
+      const l = all.find(x => x.id === id);
+      if (l && l.order !== i) { l.order = i; changed = true; }
+    });
+    if (changed) {
+      saveLocations(all);
+      toast('顺序已保存');
+    }
+    window.renderLocationManageList();
+    if (typeof renderHome === 'function') renderHome();
+  }
+
+  function onDragPointerUp(e) {
+    clearTimeout(dragPressTimer);
+    if (!dragState) return;
+    const wasDragging = !!dragState.card;
+    const moved = dragState.moved;
+    if (wasDragging) {
+      dragState.card.classList.remove('dragging');
+      if (moved) saveDragOrder();
+      // 触屏长按松开、或鼠标发生过拖动的 click 不触发"查看物品"；鼠标原地点击仍正常触发
+      if (moved || (e && e.pointerType !== 'mouse')) {
+        suppressClickAfterDrag = true;
+      }
+    }
+    dragState = null;
+  }
+
+  const dragList = $('locationManageList');
+  if (dragList) {
+    dragList.addEventListener('pointerdown', onDragPointerDown);
+    // 拖动进行中阻止页面滚动
+    dragList.addEventListener('touchmove', (e) => {
+      if (dragState && dragState.card) e.preventDefault();
+    }, { passive: false });
+    dragList.addEventListener('contextmenu', (e) => {
+      if (dragState && dragState.card) e.preventDefault();
+    });
+  }
+  document.addEventListener('pointermove', onDragPointerMove, { passive: false });
+  document.addEventListener('pointerup', onDragPointerUp);
+  document.addEventListener('pointercancel', onDragPointerUp);
 
   function parentOptions(selectedParentId, editingId) {
     const forbidden = editingId ? descendantsOf(editingId) : new Set();
@@ -3245,7 +3367,13 @@ console.log('脚本加载完成');
       all[idx] = { ...all[idx], name, parentId, level: calcLevel(parentId) };
       toast('位置已更新');
     } else {
-      all.push({ id: generateId('loc'), name, parentId, level: calcLevel(parentId) });
+      // 新位置排在同级末尾（同级已有手动排序时）
+      const siblings = all.filter(l => normParent(l.parentId) === normParent(parentId));
+      const orderedSiblings = siblings.filter(l => typeof l.order === 'number');
+      const order = orderedSiblings.length
+        ? Math.max(...orderedSiblings.map(l => l.order)) + 1
+        : undefined;
+      all.push({ id: generateId('loc'), name, parentId, level: calcLevel(parentId), order });
       toast('位置已添加');
     }
     saveLocations(all);
@@ -3340,6 +3468,13 @@ console.log('脚本加载完成');
 
   // 用捕获阶段兜底，保证按钮真实触发完整交互，而不是被旧监听或卡片点击吞掉。
   document.addEventListener('click', function (e) {
+    // 长按拖动结束后的 click 不触发任何卡片动作
+    if (suppressClickAfterDrag) {
+      suppressClickAfterDrag = false;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      return;
+    }
     const addTop = e.target.closest && e.target.closest('#addLocationBtn');
     if (addTop) {
       e.preventDefault();

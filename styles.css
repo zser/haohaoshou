@@ -2481,8 +2481,8 @@ body[data-view="itemDetailView"] .tab-bar {
     border-radius: 10px;
   }
 
-  .location-manage-card .location-toggle {
-    padding: 5px 6px;
+  .location-manage-card .location-manage-toggle {
+    padding: 7px 6px;
   }
 }
 
@@ -2517,6 +2517,53 @@ body[data-view="itemDetailView"] .tab-bar {
 .location-manage-card .manage-location-main {
   display: flex;
   flex-direction: column;
+}
+
+/* 展开/收起按钮独占一行，不与操作图标挤在一起 */
+.location-manage-card.manage-item {
+  flex-wrap: wrap;
+}
+
+.location-manage-card .location-manage-toggle {
+  flex-basis: 100%;
+  justify-content: center;
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: var(--color-bg);
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.location-manage-card .location-manage-toggle:hover {
+  background: var(--brand-primary-bg);
+}
+
+/* 长按拖动排序 */
+#locationManageList .location-manage-card {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  cursor: grab;
+}
+
+#locationManageList .location-manage-card:active {
+  cursor: grabbing;
+}
+
+.location-manage-node.dragging {
+  position: relative;
+  z-index: 10;
+}
+
+.location-manage-node.dragging > .location-manage-card {
+  cursor: grabbing;
+}
+
+.location-manage-node.dragging > .location-manage-card {
+  opacity: 0.9;
+  transform: scale(1.02);
+  border-color: var(--brand-primary);
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.22);
 }
 
 
